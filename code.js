@@ -13,7 +13,7 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 const recognition = new SpeechRecognition();
 recognition.lang = 'nl-NL';
 
-// Detect KeyPress //
+// DetectKeyPress //
 document.onkeypress = function(event){
   if (activeGame && !keyLock && event.keyCode >= 49 && event.keyCode <= 53){
     let lamp = event.keyCode - 48;
@@ -142,18 +142,9 @@ function lightOff(lamp) {
 }
 
 function sendRequest(lamp, body){
-	// let http = new XMLHttpRequest();
-  // let url = BASE_URL + lamp + "/state";
-	// http.open("PUT", url);
-  // http.send(body); 
-  // console.log(lamp + ": " +body) 
-
   let http = new XMLHttpRequest();
-    let url = BASE_URL + lampNumber + "/state";
-    http.open("PUT", url);
-    http.onreadystatechange = function() {
-      if(http.readyState == 4 && http.status == 200){
-      }
-    }
-    http.send(body); 
+  let url = BASE_URL + lampNumber + "/state";
+  http.open("PUT", url);
+  http.send(body); 
+  console.log(lamp + ": " +body)
 }
