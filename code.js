@@ -1,25 +1,37 @@
-const BRIDGE_URL = "192.168.178.24"  // IP adres van de bridge
-const API_KEY = "l1SJ36Y-mE6pM48fRULsOjfFIv2tyV68AWtcXNjB"  //sleutel om de bridge aan te sturen
-const BASE_URL = `http://${BRIDGE_URL}/api/${API_KEY}/lights/` //beginstuk van de url
+const BRIDGE_URL = "192.168.9.6"  // IP adres van de bridge
+const API_KEY = "xjrT-CEWM1jRx0SERlNhwSVjivSrCC8ryZvkHHX2"  //sleutel om de bridge aan te sturen
+const BASE_URL = `http://${BRIDGE_URL}/api/${API_KEY}/1/` //beginstuk van de url
 var activeGame = false;
-var lastKeyCode = 0;
-var score = 0;
+var deuntje = [];
+var userInput = [];
+var brightness = 0;
+var keyLock = false;
+
 
 // voiceDetection //
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 const recognition = new SpeechRecognition();
 recognition.lang = 'nl-NL';
 
-// Wait for keypress to begin game //
+// Detect KeyPress //
 document.onkeypress = function(event){
-  if (activeGame){
-    lastKeyCode = event.keyCode;
-  }else {
+  if (activeGame && !keyLock && event.keyCode >= 49 && event.keyCode <= 53){
+    let lamp = event.keyCode - 48;
+    userInput.push(lamp);
+    new Audio('audio/toon'+ (lamp) +'.ogg').play();
+    if (brightness == 255) {
+      blinkLight(lamp)
+    }
+    if (deuntje.length >= userInput.length) {
+      vergelijk();
+    } 
+    
+  } else if(!activeGame && !keyLock) {
+    activeGame = true;
     // introduction();
-    newGame('fel');
+    newGame('aan');
   }
 }
-
 
 function introduction() {
   new Audio('audio/begin.m4a').play();
@@ -33,16 +45,15 @@ recognition.onresult = function(event) {
 }
 
 function newGame(transcript) {
-  let deuntje = [];
-  let gekozen = ['hallo', 'hoi']; 
+  deuntje = [];
   if (transcript == "uit") { // licht uit
     new Audio('audio/begin spel.m4a').play();
-    let brightness = 255;
-    newRound(brightness, deuntje, gekozen);
+    brightness = 0;
+    setTimeout(newRound, 2000);
   } else if (transcript == "fel" || transcript == "aan") { // licht aan
     new Audio('audio/begin spel.m4a').play();
-    let brightness = 0;
-    setTimeout(newRound, 2000, deuntje, gekozen);
+    brightness = 255;
+    setTimeout(newRound, 2000);
   } else { // niet verstaan
     new Audio('audio/sorry.m4a').play();
     setTimeout(function(){recognition.start()}, 4000);
@@ -50,63 +61,59 @@ function newGame(transcript) {
 }
 
 
-function newRound(brightness, deuntje, gekozen) {
-  activeGame = true;
+function newRound() {
+  userInput = [];
   newNumber = generateNumber();
-  deuntje += newNumber;
+  deuntje.push(newNumber);
+  console.log(deuntje);
+  keyLock = true;
+  console.log("lock");
   for (i = 0; i < deuntje.length; i++) {
-    lamp = deuntje[i];
-    new Audio('audio/toon'+ lamp +'.ogg').play();
+    let lamp = deuntje[i];
+    setTimeout(function(){
+      new Audio('audio/toon'+ lamp +'.ogg').play();
+    }, 1000*i);
+
     if (brightness == 255) {
-      setTimeout(blinkLight, 500*i, lamp);
+      setTimeout(blinkLight, 1000*i, lamp);
     }
   }
-  lastKeyCode = 0;
-  detectKeypress(gekozen, deuntje, brightness)
+  setTimeout(function() {
+    keyLock = false;
+    console.log("unlock");
+  }, 1000*deuntje.length - 500) 
 }
 
-function detectKeypress(gekozen, deuntje, brightness) {
-  if (lastKeyCode != 0) {
-    lamp = lastKeyCode - 49;
-    if (brightness == 255) {
-      blinkLight(lamp) // keycode 49 = number1
-    }
-    gekozen += lamp;
-  }
-  if (gekozen == deuntje) {
-    vergelijk(gekozen, deuntje, brightness);
-  } else {
-    setTimeout(detectKeypress, 1, gekozen, deuntje, brightness);
-  }
-}
 
 function generateNumber() {
-  let RandomNumber = Math.floor((Math.random() * 5) + 1);
-  console.log(RandomNumber);
-  return RandomNumber;
+  let randomNumber = Math.floor((Math.random() * 5) + 1); // kans voor zelfde getal = 20%
+  if (randomNumber == deuntje[deuntje.length - 1]) { 
+    randomNumber = Math.floor((Math.random() * 5) + 1); // kans voor zelfde getal = 4 %
+    console.log("better random")
+  }
+  return randomNumber;
 }
 
-function vergelijk(gekozen, deuntje, brightness) {
-  for(i = 0; i < deuntje.length; i++) {
-    if(deuntje[i] != gekozen[i]) {
-      gameOver(brightness);
-    } else {
-      newRound(brightness, deuntje, gekozen);
+function vergelijk() {
+  for (i = 0; i < userInput.length; i++) {
+    if (deuntje[i] != userInput[i]){
+      setTimeout(gameOver, 200);
+    } else if (deuntje.length == i + 1) {
+      setTimeout(newRound, 1000);
     }
   }
 }
 
-function gameOver(brightness) {
+function gameOver() {
+  activeGame = false;
   new Audio('audio/fout.mp3').play();
   if (brightness == 255) {
     for(i = 0; i < 5; i++) {
       let body = '{"on": true, "hue": 0, "bri": 255}'; // lamp aan
-      sendRequest(lamp, body);
-      setTimeout(lightOff, 800);
+      sendRequest(i, body);
+      setTimeout(lightOff, 1000, i);
     }
   }
-  score = 0;
-  activeGame = false;
 }
 
 // LightRequest
@@ -126,17 +133,27 @@ function blinkLight(lamp) {
   let body = '{"on": true, "hue":' + color + ', "bri": 255}'; // lamp aan
   sendRequest(lamp, body);
 
-  setTimeout(lightOff, 400);
+  setTimeout(lightOff, 500, lamp);
 }
 
-function lightOff() {
+function lightOff(lamp) {
   let body = '{"on": false}'; // lamp uit
   sendRequest(lamp, body);
 }
 
 function sendRequest(lamp, body){
-	let http = new XMLHttpRequest();
-  let url = BASE_URL + lamp + "/state";
-	http.open("PUT", url);
-  http.send(body); 
+	// let http = new XMLHttpRequest();
+  // let url = BASE_URL + lamp + "/state";
+	// http.open("PUT", url);
+  // http.send(body); 
+  // console.log(lamp + ": " +body) 
+
+  let http = new XMLHttpRequest();
+    let url = BASE_URL + lampNumber + "/state";
+    http.open("PUT", url);
+    http.onreadystatechange = function() {
+      if(http.readyState == 4 && http.status == 200){
+      }
+    }
+    http.send(body); 
 }
