@@ -1,6 +1,6 @@
 const BRIDGE_URL = "192.168.9.6"  // IP adres van de bridge
 const API_KEY = "xjrT-CEWM1jRx0SERlNhwSVjivSrCC8ryZvkHHX2"  //sleutel om de bridge aan te sturen
-const BASE_URL = `http://${BRIDGE_URL}/api/${API_KEY}/1/` //beginstuk van de url
+const BASE_URL = `http://${BRIDGE_URL}/api/${API_KEY}/lights/` //beginstuk van de url
 var activeGame = false;
 var deuntje = [];
 var userInput = [];
@@ -28,8 +28,8 @@ document.onkeypress = function(event){
     
   } else if(!activeGame && !keyLock) {
     activeGame = true;
-    // introduction();
-    newGame('aan');
+    introduction();
+    // newGame('aan');
   }
 }
 
@@ -67,7 +67,7 @@ function newRound() {
   deuntje.push(newNumber);
   console.log(deuntje);
   keyLock = true;
-  console.log("lock");
+  // console.log("lock");
   for (i = 0; i < deuntje.length; i++) {
     let lamp = deuntje[i];
     setTimeout(function(){
@@ -75,12 +75,12 @@ function newRound() {
     }, 1000*i);
 
     if (brightness == 255) {
-      setTimeout(blinkLight, 1000*i, lamp);
+      setTimeout(blinkLight, 1250*i, lamp);
     }
   }
   setTimeout(function() {
     keyLock = false;
-    console.log("unlock");
+    // console.log("unlock");
   }, 1000*deuntje.length - 500) 
 }
 
@@ -111,7 +111,7 @@ function gameOver() {
     for(i = 0; i < 5; i++) {
       let body = '{"on": true, "hue": 0, "bri": 255}'; // lamp aan
       sendRequest(i, body);
-      setTimeout(lightOff, 1000, i);
+      setTimeout(lightOff, 1200, i);
     }
   }
 }
@@ -133,7 +133,7 @@ function blinkLight(lamp) {
   let body = '{"on": true, "hue":' + color + ', "bri": 255}'; // lamp aan
   sendRequest(lamp, body);
 
-  setTimeout(lightOff, 500, lamp);
+  setTimeout(lightOff, 750, lamp);
 }
 
 function lightOff(lamp) {
@@ -141,10 +141,15 @@ function lightOff(lamp) {
   sendRequest(lamp, body);
 }
 
-function sendRequest(lamp, body){
+function sendRequest(lampNumber, body){
   let http = new XMLHttpRequest();
   let url = BASE_URL + lampNumber + "/state";
-  http.open("PUT", url);
+	http.open("PUT", url);
+	http.onreadystatechange = function() {
+		if(http.readyState == 4 && http.status == 200){
+      // console.log(http)
+		}
+	}
   http.send(body); 
-  console.log(lamp + ": " +body)
+  // console.log(lampNumber + ": " +body);
 }
