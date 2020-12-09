@@ -72,7 +72,7 @@ function newRound() {
     let lamp = deuntje[i];
     setTimeout(function(){
       new Audio('audio/toon'+ lamp +'.ogg').play();
-    }, 1000*i);
+    }, 1250*i);
 
     if (brightness == 255) {
       setTimeout(blinkLight, 1250*i, lamp);
